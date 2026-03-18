@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hipster Hourly Count</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0c10;
+      --surface: #111318;
+      --border: #1e2330;
+      --border-bright: #2e3550;
+      --accent: #00e5ff;
+      --accent-dim: rgba(0,229,255,0.08);
+      --accent-mid: rgba(0,229,255,0.18);
+      --text: #c8d0e8;
+      --text-dim: #5a6480;
+      --text-bright: #eef2ff;
+      --green: #00ffb0;
+      --orange: #ffaa40;
+      --red: #ff5566;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-icon {
+      width: 42px;
+      height: 42px;
+      background: var(--accent-mid);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+      box-shadow: 0 0 20px rgba(0,229,255,0.15);
+    }
+
+    .header-text h1 {
+      font-family: var(--mono);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-bright);
+      letter-spacing: 0.04em;
+    }
+
+    .header-text p {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      margin-top: 2px;
+    }
+
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-pill {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .status-pill.idle { color: var(--text-dim); border-color: var(--border-bright); }
+    .status-pill.loading { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); animation: pulse 1.4s ease-in-out infinite; }
+    .status-pill.done { color: var(--green); border-color: var(--green); background: rgba(0,255,176,0.07); }
+    .status-pill.error { color: var(--red); border-color: var(--red); background: rgba(255,85,102,0.07); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 9px 20px;
+      border-radius: 6px;
+      border: 1px solid;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #33ecff;
+      box-shadow: 0 0 24px rgba(0,229,255,0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-dim);
+      border-color: var(--border-bright);
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      color: var(--text);
+      border-color: var(--text-dim);
+    }
+
+    .search-box {
+      flex: 1;
+      max-width: 320px;
+      background: var(--surface);
+      border: 1px solid var(--border-bright);
+      border-radius: 6px;
+      padding: 9px 14px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .search-box:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .search-box::placeholder { color: var(--text-dim); }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .stat-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stat-chip .label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat-chip .value {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    /* Progress bar */
+    .progress-wrap {
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .progress-wrap.visible { display: block; }
+
+    .progress-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    .progress-track {
+      height: 3px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      transition: width 0.3s ease;
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    /* Table wrapper */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .table-scroll {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+
+    thead tr {
+      background: rgba(0,229,255,0.04);
+      border-bottom: 1px solid var(--border-bright);
+    }
+
+    th {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      padding: 13px 16px;
+      text-align: left;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.15s;
+    }
+
+    th:hover { color: #fff; }
+
+    th .sort-icon {
+      display: inline-block;
+      margin-left: 4px;
+      opacity: 0.4;
+      font-size: 9px;
+    }
+
+    th.sort-asc .sort-icon::after { content: '▲'; opacity: 1; color: var(--accent); }
+    th.sort-desc .sort-icon::after { content: '▼'; opacity: 1; color: var(--accent); }
+    th:not(.sort-asc):not(.sort-desc) .sort-icon::after { content: '⇅'; }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+
+    tbody tr:hover { background: rgba(0,229,255,0.04); }
+
+    td {
+      font-size: 12.5px;
+      padding: 11px 16px;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .td-id {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .td-company {
+      font-weight: 500;
+      color: var(--text-bright);
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .td-date {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .td-state {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--orange);
+    }
+
+    .td-tech {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--green);
+      font-weight: 500;
+    }
+
+    .td-loading {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      animation: pulse 1s ease-in-out infinite;
+    }
+
+    .badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-completed { background: rgba(0,255,176,0.1); color: var(--green); border: 1px solid rgba(0,255,176,0.25); }
+    .badge-inprocess { background: rgba(255,170,64,0.1); color: var(--orange); border: 1px solid rgba(255,170,64,0.25); }
+    .badge-other { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(0,229,255,0.2); }
+
+    /* Empty / error state */
+    .empty-state {
+      padding: 80px 24px;
+      text-align: center;
+    }
+
+    .empty-state .icon { font-size: 32px; margin-bottom: 12px; }
+    .empty-state p { font-family: var(--mono); font-size: 13px; color: var(--text-dim); }
+
+    /* Footer */
+    .table-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      background: rgba(0,229,255,0.02);
+    }
+
+    .table-footer span {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    /* Date picker */
+    .date-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border-bright);
+      border-radius: 6px;
+      padding: 0 14px;
+      height: 36px;
+      transition: border-color 0.15s;
+    }
+    .date-wrap:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    .date-wrap label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+    .date-wrap input[type="date"] {
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-bright);
+      cursor: pointer;
+      color-scheme: dark;
+    }
+    .date-wrap input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.6) sepia(1) saturate(3) hue-rotate(155deg);
+      cursor: pointer;
+      opacity: 0.7;
+    }
+    .date-wrap input[type="date"]::-webkit-calendar-picker-indicator:hover {
+      opacity: 1;
+    }
+
+    /* Hourly summary table */
+    .hourly-wrap {
+      display: none;
+      margin-bottom: 20px;
+    }
+    .hourly-wrap.visible { display: block; }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .hourly-scroll {
+      overflow-x: auto;
+    }
+
+    .hourly-table {
+      border-collapse: collapse;
+      min-width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .hourly-table thead tr {
+      background: rgba(0,229,255,0.04);
+      border-bottom: 1px solid var(--border-bright);
+    }
+
+    .hourly-table th {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      padding: 10px 16px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    .hourly-table td {
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 9px 16px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .hourly-table tbody tr:last-child td { border-bottom: none; }
+    .hourly-table tbody tr:hover { background: rgba(0,229,255,0.04); }
+
+    .hourly-table .td-hour { color: var(--text-bright); font-size: 11px; }
+    .hourly-table .td-total { color: var(--text-bright); font-weight: 600; }
+    .hourly-table .td-bog { color: var(--green); font-weight: 600; }
+    .hourly-table .td-mnl { color: var(--accent); font-weight: 600; }
+    .hourly-table .td-cbu { color: var(--orange); font-weight: 600; }
+    .hourly-table .td-pending { color: var(--orange); }
+    .hourly-table .td-pct { color: var(--text-dim); font-size: 11px; }
+    .hourly-table .td-pct-bog { color: rgba(0,255,176,0.65); font-size: 11px; }
+    .hourly-table .td-pct-mnl { color: rgba(0,229,255,0.65); font-size: 11px; }
+    .hourly-table .td-pct-cbu { color: rgba(255,170,64,0.65); font-size: 11px; }
+
+    .hourly-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 120px;
+    }
+
+    .hourly-bar-track {
+      flex: 1;
+      height: 4px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+      min-width: 60px;
+    }
+
+    .hourly-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+
+    .hourly-bar-pct {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      width: 32px;
+      text-align: right;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-icon">⬡</div>
+    <div class="header-text">
+      <h1>HIPSTER HOURLY COUNT</h1>
+      <p>3DRoofHipster · Completed-Sent</p>
+    </div>
+    <div class="header-right">
+      <span class="status-pill idle" id="statusPill">IDLE</span>
+    </div>
+  </header>
+
+  <div class="controls">
+    <button class="btn btn-primary" id="loadBtn" onclick="loadData()">▶ LOAD DATA</button>
+    <button class="btn btn-ghost" id="refreshBtn" onclick="loadData()" style="display:none">↺ REFRESH</button>
+    <div class="date-wrap">
+      <label for="dateInput">Date</label>
+      <input type="date" id="dateInput" />
+    </div>
+    <button class="btn btn-ghost" id="tzToggle" onclick="toggleTZ()" title="Switch timezone">🕐 PDT/PST</button>
+  </div>
+
+  <div class="stats-bar" id="statsBar" style="display:none">
+    <div class="stat-chip"><span class="label">Total</span><span class="value" id="statTotal">0</span></div>
+    <div class="stat-chip"><span class="label">BOG Measured</span><span class="value" id="statTech">0</span></div>
+    <div class="stat-chip"><span class="label">Last Loaded</span><span class="value" id="statTime" style="font-size:11px;color:var(--text-dim)">—</span></div>
+  </div>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-label" id="progressLabel">Fetching task states… 0 / 0</div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+
+  <!-- Hourly summary table -->
+  <div class="hourly-wrap" id="hourlyWrap">
+    <div class="section-label">Hourly Report Count <span id="hourlyTZLabel" style="color:var(--accent);margin-left:4px">(PDT/PST)</span></div>
+    <div class="hourly-scroll">
+      <table class="hourly-table">
+        <thead>
+          <tr>
+            <th>Hour</th>
+            <th>Bogota</th>
+            <th>%</th>
+            <th>Manila</th>
+            <th>%</th>
+            <th>Cebu</th>
+            <th>%</th>
+            <th>Volume</th>
+          </tr>
+        </thead>
+        <tbody id="hourlyBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="table-wrap" id="tableWrap" style="display:none">
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);">
+      <input class="search-box" type="text" id="searchInput" placeholder="Search reports..." oninput="filterTable()" style="display:none;max-width:320px;" />
+      <span style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-left:auto;" id="filterCount"></span>
+    </div>
+    <div class="table-scroll">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th onclick="sortTable('reportID')">Report ID<span class="sort-icon"></span></th>
+            <th onclick="sortTable('companyName')">Company<span class="sort-icon"></span></th>
+            <th onclick="sortTable('completedTime')">Completed<span class="sort-icon"></span></th>
+            <th onclick="sortTable('taskState')">Task State<span class="sort-icon"></span></th>
+            <th onclick="sortTable('deliveryProductName')">Delivery<span class="sort-icon"></span></th>
+            <th onclick="sortTable('primaryProductName')">Product<span class="sort-icon"></span></th>
+            <th onclick="sortTable('status')">Status<span class="sort-icon"></span></th>
+            <th onclick="sortTable('subStatus')">Sub-Status<span class="sort-icon"></span></th>
+            <th onclick="sortTable('techName')">Tech<span class="sort-icon"></span></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="9"><div class="empty-state"><div class="icon">◈</div><p>Press LOAD DATA to fetch reports</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-footer" id="tableFooter" style="display:none">
+      <span id="footerLeft"></span>
+      <span id="footerRight"></span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const STATE_API   = (id) => `https://api.cmh.platform-prod2.evinternal.net/operations-center/api/TaskState/report/${id}`;
+
+  // Set date picker default to today
+  (function() {
+    const today = new Date();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    document.getElementById('dateInput').value = `${yyyy}-${mm}-${dd}`;
+    // Reflect default sort on the Last Modified column header
+    const ths  = document.querySelectorAll('th');
+    const keys = ['reportID','companyName','completedTime','taskState','deliveryProductName','primaryProductName','status','subStatus','techName'];
+    ths[keys.indexOf('completedTime')].classList.add('sort-desc');
+  })();
+
+  function getTrafficAPI() {
+    const raw = document.getElementById('dateInput').value; // yyyy-mm-dd
+    if (!raw) return null;
+    const [y, m, d] = raw.split('-');
+    const formatted = `${parseInt(m)}/${parseInt(d)}/${y}`; // M/D/YYYY
+    return `https://api.cmh.platform-prod.evinternal.net/operations-center/api/TaskTrafficView/?type=25&value=${formatted}&type=30&value=Test&type=18&value=HQ&type=33&value=3DRoofHipster&type=44&value=Completed-Sent&type=30&value=Training&`;
+  }
+
+  // ─── Tuning constants ────────────────────────────────────────────────────────
+  const CONCURRENCY    = 100;  // parallel state requests (was 60)
+  const RENDER_MS      = 250;  // table re-render throttle in ms
+  const FETCH_TIMEOUT  = 5000; // per-request timeout in ms (was 8000)
+  // ────────────────────────────────────────────────────────────────────────────
+
+  let allData   = [];
+  let sortKey   = 'completedTime';
+  let sortDir   = 'desc';
+  let abortCtrl = null; // AbortController for the current load
+
+  function setStatus(state, text) {
+    const pill = document.getElementById('statusPill');
+    pill.className = `status-pill ${state}`;
+    pill.textContent = text;
+  }
+
+  // ─── Timezone ────────────────────────────────────────────────────────────────
+  // API times are naive ISO strings representing Pacific wall-clock time (no Z/offset).
+  // We rewrite them as explicit Pacific offsets so JS Date holds the correct UTC epoch.
+  const PT_ZONE = 'America/Los_Angeles';
+  let useLocalTZ = false; // false = show Pacific, true = show browser local
+
+  function applyTZ() {
+    const btn = document.getElementById('tzToggle');
+    btn.textContent = useLocalTZ ? '🕐 Local' : '🕐 PDT/PST';
+    btn.style.color = useLocalTZ ? 'var(--accent)' : '';
+    btn.style.borderColor = useLocalTZ ? 'var(--accent)' : '';
+    const tzLabel = document.getElementById('hourlyTZLabel');
+    if (tzLabel) tzLabel.textContent = useLocalTZ ? '(Local)' : '(PDT/PST)';
+  }
+
+  function toggleTZ() {
+    useLocalTZ = !useLocalTZ;
+    localStorage.setItem('hipster_useLocalTZ', useLocalTZ ? '1' : '0');
+    applyTZ();
+    // Re-render everything that shows times
+    if (allData.length) { filterTable(); renderHourly(); }
+  }
+
+  // Restore saved TZ preference
+  (function() {
+    const saved = localStorage.getItem('hipster_useLocalTZ');
+    if (saved !== null) useLocalTZ = saved === '1';
+    applyTZ();
+  })();
+
+  // Convert a naive Pacific ISO string (e.g. "2026-03-16T19:24:41.517") to a
+  // proper Date by figuring out the correct UTC offset for that moment in PT.
+  function ptToDate(iso) {
+    if (!iso) return null;
+    // Step 1: assume UTC to get an approximate epoch for DST lookup
+    const approx = new Date(iso + 'Z');
+    // Step 2: find what Pacific wall-clock looks like at that UTC moment
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: PT_ZONE,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    }).formatToParts(approx);
+    const p = {};
+    parts.forEach(({ type, value }) => { p[type] = value; });
+    // Step 3: difference between what PT says and what we fed in = PT offset
+    const ptWall = new Date(`${p.year}-${p.month}-${p.day}T${p.hour === '24' ? '00' : p.hour}:${p.minute}:${p.second}Z`);
+    const offsetMs = approx - ptWall; // e.g. +7h for PDT, +8h for PST
+    // Step 4: correct epoch = naive-as-UTC + offset
+    return new Date(approx.getTime() + offsetMs);
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    const d = ptToDate(iso);
+    if (!d) return '—';
+    const tz = useLocalTZ ? undefined : PT_ZONE;
+    return d.toLocaleDateString('en-US', { timeZone: tz, month: 'short', day: '2-digit', year: '2-digit' })
+      + ' ' + d.toLocaleTimeString('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+
+  // Optimised: single reverse pass collects both landmarks, no second loop needed
+  function extractTech(taskStates) {
+    if (!taskStates || !taskStates.length) return '—';
+
+    let metricsIdx  = -1;
+    let checkinDesc = null;
+
+    for (let i = taskStates.length - 1; i >= 0; i--) {
+      const desc = taskStates[i].description || '';
+
+      if (metricsIdx === -1) {
+        // Still looking for the metrics marker
+        if (desc.includes('MetricsCalculated-StateTransition')) metricsIdx = i;
+        continue; // keep scanning backwards
+      }
+
+      // metrics marker found — now find the first Measured-CheckIn before it
+      if (desc.includes('Measured-CheckIn')) {
+        checkinDesc = desc;
+        break; // done — no need to scan further
+      }
+    }
+
+    if (metricsIdx === -1 || checkinDesc === null) return '—';
+    const match = checkinDesc.match(/\(([^)]+)\)/);
+    return match ? match[1] : checkinDesc;
+  }
+
+  function statusBadge(s) {
+    if (!s) return '<span class="badge badge-other">—</span>';
+    const lower = s.toLowerCase();
+    if (lower.includes('complet')) return `<span class="badge badge-completed">${s}</span>`;
+    if (lower.includes('process') || lower.includes('pending')) return `<span class="badge badge-inprocess">${s}</span>`;
+    return `<span class="badge badge-other">${s}</span>`;
+  }
+
+  function renderRows(data) {
+    const tbody = document.getElementById('tableBody');
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="icon">◈</div><p>No matching records found</p></div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map(r => `
+      <tr data-id="${r.reportID}">
+        <td class="td-id">${r.reportID}</td>
+        <td class="td-company" title="${r.companyName}">${r.companyName || '—'}</td>
+        <td class="td-date">${r.techName === null ? '<span class="td-loading">loading…</span>' : formatDate(r.completedTime)}</td>
+        <td class="td-state">${r.taskState || '—'}</td>
+        <td style="font-size:12px;color:var(--text)">${r.deliveryProductName || '—'}</td>
+        <td style="font-size:12px;color:var(--text);max-width:180px;overflow:hidden;text-overflow:ellipsis" title="${r.primaryProductName}">${r.primaryProductName || '—'}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td>${statusBadge(r.subStatus)}</td>
+        <td class="${r.techName && r.techName !== '—' ? 'td-tech' : 'td-loading'}">${r.techName === null ? '<span class="td-loading">loading…</span>' : (r.techName || '—')}</td>
+      </tr>
+    `).join('');
+
+    // stats
+    document.getElementById('statsBar').style.display = 'flex';
+    document.getElementById('statTotal').textContent = allData.length;
+    document.getElementById('statTech').textContent = allData.filter(r => r.techName && r.techName.includes('-BOG')).length;
+    // statPending element removed; no-op
+
+    // footer
+    document.getElementById('tableFooter').style.display = 'flex';
+    document.getElementById('footerLeft').textContent = `${data.length} BOG records shown`;
+    document.getElementById('footerRight').textContent = `${allData.length} total loaded`;
+  }
+
+  function renderHourly() {
+    const buckets = {};
+
+    for (const r of allData) {
+      if (!r.completedTime) continue;
+      const d = ptToDate(r.completedTime);
+      if (!d) continue;
+      let hh;
+      if (useLocalTZ) {
+        hh = String(d.getHours()).padStart(2, '0');
+      } else {
+        const hp = new Intl.DateTimeFormat('en-US', { timeZone: PT_ZONE, hour: '2-digit', hour12: false }).formatToParts(d);
+        hh = hp.find(x => x.type === 'hour').value;
+        if (hh === '24') hh = '00';
+      }
+      const key = `${hh}:00`;
+      if (!buckets[key]) buckets[key] = { hour: key, total: 0, bog: 0, mnl: 0, cbu: 0, pending: 0 };
+      buckets[key].total++;
+      if (r.techName === null) buckets[key].pending++;
+      else if (r.techName && r.techName.includes('-BOG')) buckets[key].bog++;
+      else if (r.techName && r.techName.includes('-MNL')) buckets[key].mnl++;
+      else if (r.techName && r.techName.includes('-CBU')) buckets[key].cbu++;
+    }
+
+    const rows = Object.values(buckets).sort((a, b) => a.hour.localeCompare(b.hour));
+    const maxTotal = rows.reduce((m, r) => Math.max(m, r.total), 0);
+
+    const tbody = document.getElementById('hourlyBody');
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;font-family:var(--mono);font-size:12px;color:var(--text-dim)">No data</td></tr>`;
+    } else {
+      tbody.innerHTML = rows.map(r => {
+        const barPct = maxTotal ? Math.round((r.total / maxTotal) * 100) : 0;
+        const measured = r.bog + r.mnl + r.cbu; // excludes pending/unknown
+        const pctOf = (v) => measured > 0 ? Math.round((v / measured) * 100) : null;
+        const bogPct = pctOf(r.bog), mnlPct = pctOf(r.mnl), cbuPct = pctOf(r.cbu);
+        const fmtPct = (v, cls) => v !== null
+          ? `<td class="${cls}">${v}%</td>`
+          : `<td class="td-pct" style="color:var(--text-dim)">—</td>`;
+        const cell = (v, cls) => v > 0 ? `<td class="${cls}">${v}</td>` : `<td style="color:var(--text-dim)">0</td>`;
+        return `
+          <tr>
+            <td class="td-hour">${r.hour}</td>
+            ${cell(r.bog, 'td-bog')}
+            ${fmtPct(bogPct, 'td-pct-bog')}
+            ${cell(r.mnl, 'td-mnl')}
+            ${fmtPct(mnlPct, 'td-pct-mnl')}
+            ${cell(r.cbu, 'td-cbu')}
+            ${fmtPct(cbuPct, 'td-pct-cbu')}
+            <td>
+              <div class="hourly-bar-wrap">
+                <div class="hourly-bar-track">
+                  <div class="hourly-bar-fill" style="width:${barPct}%"></div>
+                </div>
+                <span class="hourly-bar-pct">${r.total}</span>
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    document.getElementById('hourlyWrap').classList.add('visible');
+  }
+
+  function filterTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const bogOnly = allData.filter(r => r.techName !== null && (r.techName || '').includes('-BOG'));
+    const filtered = q
+      ? bogOnly.filter(r =>
+          String(r.reportID).includes(q) ||
+          (r.companyName || '').toLowerCase().includes(q) ||
+          (r.taskState || '').toLowerCase().includes(q) ||
+          (r.techName || '').toLowerCase().includes(q) ||
+          (r.status || '').toLowerCase().includes(q)
+        )
+      : bogOnly;
+    document.getElementById('filterCount').textContent = q ? `${filtered.length} of ${allData.length}` : '';
+    renderRows(sortData(filtered));
+  }
+
+  function sortData(data) {
+    if (!sortKey) return data;
+    return [...data].sort((a, b) => {
+      const av = a[sortKey] ?? '';
+      const bv = b[sortKey] ?? '';
+      const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }
+
+  function sortTable(key) {
+    if (sortKey === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    else { sortKey = key; sortDir = 'asc'; }
+
+    document.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+    const ths  = document.querySelectorAll('th');
+    const keys = ['reportID','companyName','completedTime','taskState','deliveryProductName','primaryProductName','status','subStatus','techName'];
+    const idx  = keys.indexOf(key);
+    if (idx !== -1) ths[idx].classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+
+    filterTable();
+  }
+
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 1200; // ms between retries
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function fetchWithRetry(url, signal, retries = MAX_RETRIES) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch(url, { signal });
+        if (res.ok) return res;
+        // Don't retry client errors (4xx), only server errors (5xx)
+        if (res.status < 500) return res;
+        if (attempt === retries) return res; // give up, return the bad response
+      } catch (err) {
+        if (err.name === 'AbortError') throw err; // never swallow abort
+        if (attempt === retries) throw err;
+      }
+      await sleep(RETRY_DELAY * attempt); // back-off: 1.2s, 2.4s
+    }
+  }
+
+  async function loadData() {
+    // Cancel any previous in-flight load
+    if (abortCtrl) abortCtrl.abort();
+    abortCtrl = new AbortController();
+    const signal = abortCtrl.signal;
+
+    document.getElementById('loadBtn').disabled = true;
+    document.getElementById('refreshBtn').style.display = 'none';
+    setStatus('loading', 'FETCHING');
+    allData = [];
+    document.getElementById('hourlyWrap').classList.remove('visible');
+    document.getElementById('tableWrap').style.display = 'none';
+    document.getElementById('searchInput').style.display = 'none';
+
+    const progressWrap  = document.getElementById('progressWrap');
+    const progressFill  = document.getElementById('progressFill');
+    const progressLabel = document.getElementById('progressLabel');
+
+    try {
+      // Step 1: fetch traffic view (with retry)
+      const TRAFFIC_API = getTrafficAPI();
+      if (!TRAFFIC_API) throw new Error('Please select a date before loading data.');
+
+      setStatus('loading', 'FETCHING');
+      let res;
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        progressLabel.textContent = attempt > 1 ? `Retrying… attempt ${attempt} of ${MAX_RETRIES}` : '';
+        progressWrap.classList.toggle('visible', attempt > 1);
+        res = await fetch(TRAFFIC_API, { signal });
+        if (res.ok) break;
+        if (res.status < 500 || attempt === MAX_RETRIES)
+          throw new Error(`Server returned ${res.status} after ${attempt} attempt(s). The server may be temporarily unavailable — please try again in a moment.`);
+        await sleep(RETRY_DELAY * attempt);
+      }
+      progressWrap.classList.remove('visible');
+
+      const reports = await res.json();
+
+      if (!reports.length) {
+        setStatus('done', 'DONE');
+        document.getElementById('tableBody').innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="icon">◈</div><p>No reports returned</p></div></td></tr>`;
+        document.getElementById('loadBtn').disabled = false;
+        return;
+      }
+
+      // Initialize rows with null techName (loading)
+      allData = reports.map(r => ({ ...r, techName: null }));
+      document.getElementById('tableWrap').style.display = 'block';
+      document.getElementById('searchInput').style.display = 'block';
+      renderRows(sortData(allData));
+      renderHourly();
+      document.getElementById('statsBar').style.display = 'flex';
+      document.getElementById('statTotal').textContent = allData.length;
+      document.getElementById('statTime').textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+      // Step 2: fetch task states concurrently with throttled re-renders
+      progressWrap.classList.add('visible');
+      progressLabel.textContent = `Fetching task states… 0 / ${reports.length}`;
+      progressFill.style.width = '0%';
+
+      let completed = 0;
+
+      // Patch a single resolved row in-place — no full re-render needed
+      function patchRow(r) {
+        const tr = document.querySelector(`#tableBody tr[data-id="${r.reportID}"]`);
+        if (!tr) return;
+        const cells = tr.cells;
+        // cell 2 = Completed time
+        cells[2].className = 'td-date';
+        cells[2].innerHTML = formatDate(r.completedTime);
+        // cell 8 = Tech
+        const hasTech = r.techName && r.techName !== '—';
+        cells[8].className = hasTech ? 'td-tech' : '';
+        cells[8].textContent = r.techName || '—';
+      }
+
+      // Throttled hourly + stat re-render (heavier, runs less often)
+      let hourlyTimer = null;
+      function scheduleHourly() {
+        if (!hourlyTimer) {
+          hourlyTimer = setTimeout(() => {
+            hourlyTimer = null;
+            renderHourly();
+            document.getElementById('statTech').textContent =
+              allData.filter(r => r.techName && r.techName.includes('-BOG')).length;
+          }, RENDER_MS * 4);
+        }
+      }
+
+      async function fetchState(report, idx) {
+        let timeoutId;
+        const timeoutSignal = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new DOMException('Timeout', 'TimeoutError')), FETCH_TIMEOUT);
+        });
+
+        try {
+          const fetchPromise = fetch(STATE_API(report.reportID), { signal });
+          const r = await Promise.race([fetchPromise, timeoutSignal]);
+          clearTimeout(timeoutId);
+          if (!r.ok) { allData[idx].techName = '—'; }
+          else {
+            const data = await r.json();
+            allData[idx].techName = extractTech(data.taskStates);
+            const completedState = (data.taskStates || []).find(s => s.description === 'Completed-Trigger');
+            allData[idx].completedTime = completedState ? completedState.stateTime : null;
+          }
+        } catch {
+          clearTimeout(timeoutId);
+          allData[idx].techName = '—';
+        } finally {
+          completed++;
+          const pct = Math.round((completed / reports.length) * 100);
+          progressFill.style.width = pct + '%';
+          progressLabel.textContent = `Fetching task states… ${completed} / ${reports.length}`;
+          patchRow(allData[idx]);
+          scheduleHourly();
+        }
+      }
+
+      // Rolling concurrency limiter
+      await new Promise(resolve => {
+        let started = 0, finished = 0;
+        function next() {
+          while (started < reports.length && (started - finished) < CONCURRENCY) {
+            const idx = started++;
+            fetchState(reports[idx], idx).then(() => {
+              finished++;
+              if (finished === reports.length) resolve();
+              else next();
+            });
+          }
+        }
+        next();
+      });
+
+      if (hourlyTimer) { clearTimeout(hourlyTimer); hourlyTimer = null; }
+      progressWrap.classList.remove('visible');
+      setStatus('done', 'LOADED');
+      document.getElementById('refreshBtn').style.display = 'inline-block';
+      // Final authoritative render now all states are resolved
+      filterTable();
+      renderHourly();
+      document.getElementById('statTech').textContent =
+        allData.filter(r => r.techName && r.techName.includes('-BOG')).length;
+
+    } catch (err) {
+      if (err.name === 'AbortError') return; // silently ignore cancelled loads
+      setStatus('error', 'ERROR');
+      document.getElementById('tableBody').innerHTML = `
+        <tr><td colspan="9"><div class="empty-state">
+          <div class="icon">⚠</div>
+          <p style="color:var(--red)">${err.message}</p>
+          <p style="margin-top:8px;font-size:11px">Check CORS / network access and try again</p>
+        </div></td></tr>`;
+      progressWrap.classList.remove('visible');
+    } finally {
+      document.getElementById('loadBtn').disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
